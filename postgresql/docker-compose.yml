@@ -2,7 +2,10 @@ services:
 
   wekandb:
     container_name: wekan-db
-    image: ghcr.io/ferretdb/all-in-one
+    #image: ghcr.io/ferretdb/all-in-one
+    #image: ghcr.io/ferretdb/ferretdb-dev:2.0.0-rc.1
+    image: ghcr.io/ferretdb/ferretdb-eval:2
+
     restart: on-failure
     # Opening port to outside:
     ports:
@@ -21,10 +24,13 @@ services:
       - FERRETDB_HANDLER=postgresql
       - FERRETDB_REPL_SET_NAME=rs0
       - FERRETDB_TELEMETRY=disable
+      - FERRETDB_LOG_LEVEL=error
 
   # Creating OpLog collection to local db:
   wekandb-oplog-setup:
-    image: ghcr.io/ferretdb/all-in-one
+    #image: ghcr.io/ferretdb/all-in-one
+    #image: ghcr.io/ferretdb/ferretdb-dev:2.0.0-rc.1
+    image: ghcr.io/ferretdb/ferretdb-eval:2
     restart: no
     depends_on:
       - wekandb

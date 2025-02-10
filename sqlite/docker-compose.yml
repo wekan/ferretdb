@@ -5,7 +5,8 @@ services:
     #image: ghcr.io/ferretdb/ferretdb
     #image: ghcr.io/ferretdb/all-in-one
     # Newest development image: https://github.com/ferretdb/FerretDB/pkgs/container/ferretdb-dev
-    image: ghcr.io/ferretdb/ferretdb-dev:main
+    #image: ghcr.io/ferretdb/ferretdb-dev:main
+    image: ghcr.io/ferretdb/ferretdb-dev:2.0.0-rc.1
     restart: on-failure
     ports:
       - 27017:27017
@@ -23,7 +24,8 @@ services:
 
   # Development FerretDB image is used to create OpLog and then exit.
   wekandb-oplog-setup:
-    image: ghcr.io/ferretdb/ferretdb-dev:main
+    #image: ghcr.io/ferretdb/ferretdb-dev:main
+    image: ghcr.io/ferretdb/ferretdb-dev:2.0.0-rc.1
     restart: no
     networks:
       - wekan-tier
