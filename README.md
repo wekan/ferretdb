@@ -3,7 +3,8 @@
 - 2025-05-15: FerretDB 2.0 PostgreSQL testing:
   - https://forums.meteor.com/t/guide-how-to-use-meteor-with-postgres/55709/20
   - https://atmospherejs.com/meteorisgreat/ferretdb-index-fix
-  - https://github.com/tannerlab/ferretdb-index-fix
+  - https://github.com/tannerlab/ferretdb-index-fix'
+  - https://forums.meteor.com/t/ferretdb-1-18-now-has-oplog-support-trying-replace-mongodb-6-x-with-ferretdb-postgresql-or-ferretdb-sqlite/61092/7
 - Meteor Forum post https://forums.meteor.com/t/ferretdb-1-18-now-has-oplog-support-trying-replace-mongodb-6-x-with-ferretdb-postgresql-or-ferretdb-sqlite/61092/4
 - FerretDB known differences: https://docs.ferretdb.io/diff/
 - FerretDB OpLog Support: https://docs.ferretdb.io/configuration/oplog-support/
