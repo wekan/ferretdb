@@ -2,6 +2,22 @@
 
 <!-- markdownlint-disable MD024 MD034 -->
 
+## Upcoming FerretDB release
+
+### Fixed 🐛
+
+- **Concurrent document modifiers preserve every acknowledged update.** Serialize
+  mutation commands across connections for the entire query, modification and
+  write, rather than only their final SQL replacement. Concurrent `$addToSet`
+  and `$inc` operations no longer overwrite another client's changes, and a
+  stale update cannot undo an account-disable change. Share the same boundary
+  with namespace mutations, user writes and background TTL/capped cleanup;
+  reads, handshakes and awaiting cursors continue independently. Queue waits
+  honor connection-context cancellation. This is one server's mutation boundary,
+  not cross-process transaction support. SQLite snapshot-controlled regressions
+  cover concurrent updates, findAndModify, conditional filters, cleanup
+  cancellation and failure release by @xet7. Thanks to xet7.
+
 ## [v1.73.0](https://github.com/wekan/FerretDB/releases/tag/v1.73.0) (2026-09-07)
 
 ### Fixed 🐛

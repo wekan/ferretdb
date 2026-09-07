@@ -74,6 +74,9 @@ type Handler struct {
 	commands map[string]*command
 	wg       sync.WaitGroup
 
+	mutationOnce sync.Once
+	mutationGate chan struct{}
+
 	cappedCleanupStop             chan struct{}
 	cleanupCappedCollectionsDocs  *prometheus.CounterVec
 	cleanupCappedCollectionsBytes *prometheus.CounterVec
@@ -452,6 +455,12 @@ func (h *Handler) runTTLCleanup() {
 
 // cleanupAllTTLCollections removes expired documents from every TTL index in every collection.
 func (h *Handler) cleanupAllTTLCollections(ctx context.Context) error {
+	release, err := h.lockMutation(ctx)
+	if err != nil {
+		return err
+	}
+	defer release()
+
 	ctx, span := otel.Tracer("").Start(ctx, "HandlerCleanupAllTTLCollections")
 
 	start := time.Now()
@@ -626,6 +635,12 @@ func (h *Handler) Collect(ch chan<- prometheus.Metric) {
 
 // cleanupAllCappedCollections drops the given percent of documents from all capped collections.
 func (h *Handler) cleanupAllCappedCollections(ctx context.Context) error {
+	release, err := h.lockMutation(ctx)
+	if err != nil {
+		return err
+	}
+	defer release()
+
 	ctx, span := otel.Tracer("").Start(ctx, "HandlerCleanupAllCappedCollections")
 	h.L.DebugContext(ctx, "cleanupAllCappedCollections: started", slog.Int("percentage", int(h.CappedCleanupPercentage)))
 

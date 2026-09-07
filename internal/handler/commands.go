@@ -334,6 +334,8 @@ func (h *Handler) initCommands() {
 		Help:      "Report activity and slow FerretDB down when the host CPU is high.",
 	}
 
+	h.serializeMutationCommands()
+
 	for name, cmd := range h.commands {
 		if h.EnableNewAuth && !cmd.anonymous {
 			cmdHandler := h.commands[name].Handler
