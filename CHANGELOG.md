@@ -2,6 +2,21 @@
 
 <!-- markdownlint-disable MD024 MD034 -->
 
+## Upcoming FerretDB release
+
+### Fixed 🐛
+
+- **Docker release builds select platforms supported by their runtime.** The
+  previous bookworm image had no matching manifest for several requested CPUs,
+  aborting builds for every registry. Use trixie with CA certificates and the
+  C++ runtime required by bundled mongosh; select its seven supported runtime
+  targets and explicitly report ARMv6, ARMv5 and Loong64 container omissions
+  while retaining standalone binaries. Download shell packages only for present
+  supported server assets, fail on missing matching packages, and smoke-test
+  FerretDB, Node and mongosh on the target architecture before publication.
+  Regression coverage exercises full, partial, missing-shell and empty releases
+  by @xet7. Thanks to xet7.
+
 ## [v1.71.0](https://github.com/wekan/FerretDB/releases/tag/v1.71.0) (2026-09-07)
 
 ### New Features 🎉

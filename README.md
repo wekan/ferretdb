@@ -87,8 +87,27 @@ independently — so a registry being down never blocks the others:
 | Quay.io | `quay.io/wekan/ferretdb` | https://quay.io/repository/wekan/ferretdb |
 | GitHub Container Registry | `ghcr.io/wekan/ferretdb` | https://github.com/wekan/FerretDB/pkgs/container/ferretdb |
 
-The image is `FROM scratch` (a static binary, no shell) and defaults to the **SQLite**
-backend on `0.0.0.0:27017` with state in `/state` and telemetry disabled:
+The release image uses `debian:trixie-slim` and includes `mongosh`, its C++ runtime
+libraries and CA certificates. It defaults to the **SQLite** backend on
+`0.0.0.0:27017` with state in `/state` and telemetry disabled.
+
+Container targets are amd64, arm64, ARMv7, i386, ppc64le, s390x and riscv64,
+provided the release contains the corresponding FerretDB binary and verified
+mongosh package. ARMv6 and Loong64 remain standalone binary targets: the official
+Debian runtime has no matching images. ARMv5 also lacks a mongosh runtime.
+The build reports these omissions explicitly. QEMU runs target package
+installation and checks FerretDB, Node and mongosh versions before publication;
+the binaries themselves are still prebuilt. The separate source-build
+`Dockerfile` remains a FerretDB-only scratch image.
+
+Run the release-selection regression checks locally with:
+
+```sh
+mkdir -p .tools/tmp
+TMPDIR="$PWD/.tools/tmp" bash integration/docker_mongosh_test.sh
+```
+
+Start the release image:
 
 ```sh
 docker run -d --rm --name ferretdb -p 27017:27017 -v ferretdb-state:/state wekanteam/ferretdb

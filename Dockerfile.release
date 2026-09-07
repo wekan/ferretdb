@@ -4,7 +4,7 @@
 # GitHub Release (downloaded into ./dist/ferretdb-<arch>) — no compiling. Used by
 # .github/workflows/docker.yml. The pick stage runs on the native build platform
 # and just selects the binary matching the target platform, so buildx emits every
-# architecture present in ./dist WITHOUT QEMU. The matching mongosh package is
+# supported runtime architecture present in ./dist. The matching mongosh package is
 # assembled by wekan/mongosh-patches with the already-built node-patches runtime.
 #
 # See Dockerfile.release.dockerignore for the build context (the ./dist dir +
@@ -41,7 +41,13 @@ RUN set -eux; \
     mkdir -p /state; \
     chown 1000:1000 /state
 
-FROM debian:bookworm-slim AS final
+FROM debian:trixie-slim AS final
+
+# Node packages are linked against newer glibc and libstdc++ than bookworm.
+# Unlike the native pick stage, this runs on the target CPU (QEMU in CI).
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ca-certificates libstdc++6 \
+    && rm -rf /var/lib/apt/lists/*
 
 COPY build/ferretdb/passwd /etc/passwd
 COPY build/ferretdb/group  /etc/group
@@ -50,6 +56,12 @@ USER ferretdb:ferretdb
 COPY --from=pick /ferretdb /ferretdb
 COPY --from=pick /mongosh /opt/mongosh
 COPY --from=pick --chown=ferretdb:ferretdb /state /state
+
+# Verify the target loader, shared libraries, launcher and JS bundle before any
+# registry receives an image. These commands need no database or network service.
+RUN /ferretdb --version \
+    && /opt/mongosh/bin/node --version \
+    && /opt/mongosh/mongosh --version
 
 ENTRYPOINT ["/ferretdb"]
 

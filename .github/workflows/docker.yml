@@ -4,9 +4,9 @@ name: Docker (from release binaries)
 # attached to a GitHub Release (no compilation) and pushes it to Docker Hub,
 # Quay.io and GHCR — the same registries release-all.yml used to. Because the
 # binaries are already built, buildx just repackages the right one per target
-# into a small runtime image, with NO QEMU. Only the Linux ferretdb-<arch> assets
-# are downloaded, so the platform list covers every Linux platform in the release
-# (amd64, arm64, armhf, armv6, armel, i386, ppc64le, s390x, riscv64, loong64).
+# into a runtime image. QEMU installs target runtime libraries and smoke-tests
+# the packaged commands. Only platforms supported by the Debian runtime and
+# having both FerretDB and mongosh assets are included (see release-platforms.sh).
 #
 # Registry credentials are the SAME base64("username:token") secrets as wekan/wekan:
 #   DOCKERHUB_AUTH   Docker Hub
@@ -42,6 +42,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+
+      - name: Test Docker release selection
+        run: |
+          mkdir -p .tools/tmp
+          TMPDIR="$PWD/.tools/tmp" bash integration/docker_mongosh_test.sh
+
+      - name: Set up target runtime emulation
+        uses: docker/setup-qemu-action@v4
+        with:
+          platforms: arm,arm64,ppc64le,s390x,riscv64
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
@@ -82,7 +92,10 @@ jobs:
           fi
           [ -n "$tag" ] && [ "$tag" != null ] || { echo '::error::no mongosh release found'; exit 1; }
           echo "MONGOSH_VERSION=$tag" >> "$GITHUB_ENV"
-          for arch in amd64 arm64 armhf armv6 armv7 i386 ppc64le s390x riscv64 loong64; do
+          for binary in amd64 arm64 armhf i386 ppc64le s390x riscv64; do
+            [ -f "dist/ferretdb-$binary" ] || continue
+            arch="$binary"
+            [ "$arch" != armhf ] || arch=armv7
             for suffix in tgz tgz.sha256sum; do
               gh release download "$tag" --repo "$MONGOSH_REPO" \
                 --pattern "mongosh-$arch.$suffix" --dir dist --clobber
@@ -95,33 +108,7 @@ jobs:
       - name: Compute platform list from the downloaded binaries
         run: |
           set -euo pipefail
-          map() { case "$1" in
-            amd64)   echo linux/amd64 ;;
-            arm64)   echo linux/arm64 ;;
-            armhf)   echo linux/arm/v7 ;;
-            armv6)   echo linux/arm/v6 ;;
-            armel)   echo linux/arm/v5 ;;
-            i386)    echo linux/386 ;;
-            ppc64le) echo linux/ppc64le ;;
-            s390x)   echo linux/s390x ;;
-            riscv64) echo linux/riscv64 ;;
-            loong64) echo linux/loong64 ;;
-            *)       echo "" ;;
-          esac; }
-          plats=""
-          for f in dist/ferretdb-*; do
-            [ -f "$f" ] || continue
-            name="${f#dist/ferretdb-}"
-            # Every image must have a matching shell. mongosh-patches has no
-            # armel runtime yet, so omit arm/v5 rather than ship it without one.
-            shell_name="$name"
-            [ "$name" != armhf ] || shell_name=armv7
-            [ -f "dist/mongosh-$shell_name.tgz" ] || continue
-            p="$(map "$name")"
-            [ -n "$p" ] || continue
-            plats="${plats:+$plats,}$p"
-          done
-          [ -n "$plats" ] || { echo "::error::no linux ferretdb-<arch> binaries downloaded"; exit 1; }
+          plats="$(bash build/ferretdb/release-platforms.sh dist)"
           echo "Platforms: $plats"
           echo "PLATFORMS=$plats" >> "$GITHUB_ENV"
 
