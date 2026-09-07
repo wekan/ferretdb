@@ -105,6 +105,13 @@ jobs:
           echo '=== verified mongosh packages ==='
           ls -la dist/mongosh-*
 
+      - name: Prepare same-version official PowerPC Node runtime
+        run: |
+          set -euo pipefail
+          mkdir -p "$PWD/.tools/tmp/ferretdb-node"
+          export TMPDIR="$PWD/.tools/tmp/ferretdb-node"
+          bash build/ferretdb/official-ppc64le-node.sh dist
+
       - name: Compute platform list from the downloaded binaries
         run: |
           set -euo pipefail

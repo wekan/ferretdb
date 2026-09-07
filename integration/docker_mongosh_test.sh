@@ -20,6 +20,7 @@ grep -q 'bash build/ferretdb/release-platforms.sh dist' "$workflow"
 # Exercise actual selection with complete, partial and broken release assets.
 # The unsupported platforms previously made every registry build fail.
 : "${TMPDIR:?set TMPDIR to a repository-local temporary directory}"
+bash "$root/tests/official-ppc64le-node.sh"
 tmp="$(mktemp -d "$TMPDIR/ferretdb-platforms.XXXXXX")"
 trap 'rm -rf "$tmp"' EXIT
 for arch in amd64 arm64 armhf i386 ppc64le s390x riscv64 armv6 armel loong64; do

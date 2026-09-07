@@ -2,6 +2,18 @@
 
 <!-- markdownlint-disable MD024 MD034 -->
 
+## Upcoming FerretDB release
+
+### Fixed 🐛
+
+- **PowerPC Docker images use a working, same-version MongoDB Shell runtime.**
+  The packaged cross-built Node binary aborts during V8 initialization before
+  executing JavaScript. Discover its version on the target architecture and
+  download the official native PowerPC build with its published SHA-256 checksum
+  and license. Reject version mismatches and retain JavaScript and mongosh smoke
+  checks; regression tests cover version discovery and invalid checksums
+  by @xet7. Thanks to xet7.
+
 ## [v1.72.0](https://github.com/wekan/FerretDB/releases/tag/v1.72.0) (2026-09-07)
 
 ### Fixed 🐛

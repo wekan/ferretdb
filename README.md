@@ -100,6 +100,27 @@ installation and checks FerretDB, Node and mongosh versions before publication;
 the binaries themselves are still prebuilt. The separate source-build
 `Dockerfile` remains a FerretDB-only scratch image.
 
+PowerPC uses the official native Node build of the exact version embedded in
+its mongosh package. The current cross-built runtime aborts during V8 startup,
+even for `node -e 'console.log(1)'`; disabling snapshots or JIT does not fix it.
+`build/ferretdb/official-ppc64le-node.sh dist` discovers the bundled version under
+QEMU, verifies the official archive against `nodejs.org`'s SHA-256 manifest, and
+retains its license. The Docker build rejects a version mismatch before swapping
+runtimes. Other architectures retain their packaged Node binary. This explicit
+policy can be removed after the cross-built PowerPC runtime passes JavaScript
+and mongosh validation.
+
+To reproduce locally, download the matching FerretDB and mongosh release assets
+into `dist`, register PowerPC QEMU when building on another CPU, then run:
+
+```sh
+mkdir -p "$PWD/.tools/tmp"
+export TMPDIR="$PWD/.tools/tmp"
+bash build/ferretdb/official-ppc64le-node.sh dist
+docker build --platform linux/ppc64le -f Dockerfile.release -t ferretdb-ppc-local .
+```
+
+
 Run the release-selection regression checks locally with:
 
 ```sh

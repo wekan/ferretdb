@@ -38,6 +38,11 @@ RUN set -eux; \
     mkdir -p /mongosh; \
     tar -xzf "/bins/mongosh-${m}.tgz" -C /mongosh --strip-components=1; \
     test -x /mongosh/mongosh; \
+    if [ "$n" = ppc64le ]; then \
+      cp /bins/official-node-ppc64le /mongosh/bin/node.official; \
+      cp /bins/official-node-ppc64le.version /mongosh/bin/node.official.version; \
+      cp /bins/official-node-ppc64le.LICENSE /mongosh/LICENSE-node-official; \
+    fi; \
     mkdir -p /state; \
     chown 1000:1000 /state
 
@@ -51,16 +56,28 @@ RUN apt-get update \
 
 COPY build/ferretdb/passwd /etc/passwd
 COPY build/ferretdb/group  /etc/group
-USER ferretdb:ferretdb
 
 COPY --from=pick /ferretdb /ferretdb
 COPY --from=pick /mongosh /opt/mongosh
 COPY --from=pick --chown=ferretdb:ferretdb /state /state
 
+# Keep the package version: reject an outdated or mismatched replacement before
+# selecting the official native PPC build. The packaged cross-built V8 snapshot
+# fails even on node -e; changing mongosh flags cannot repair it.
+RUN if [ -f /opt/mongosh/bin/node.official ]; then \
+      expected="$(cat /opt/mongosh/bin/node.official.version)"; \
+      test "$(/opt/mongosh/bin/node --version)" = "$expected" \
+      && test "$(/opt/mongosh/bin/node.official --version)" = "$expected" \
+      && mv /opt/mongosh/bin/node.official /opt/mongosh/bin/node; \
+    fi
+
+USER ferretdb:ferretdb
+
 # Verify the target loader, shared libraries, launcher and JS bundle before any
 # registry receives an image. These commands need no database or network service.
 RUN /ferretdb --version \
     && /opt/mongosh/bin/node --version \
+    && /opt/mongosh/bin/node -e "if (1 + 1 !== 2) process.exit(1)" \
     && /opt/mongosh/mongosh --version
 
 ENTRYPOINT ["/ferretdb"]
