@@ -2,6 +2,19 @@
 
 <!-- markdownlint-disable MD024 MD034 -->
 
+## Upcoming FerretDB release
+
+### New Features 🎉
+
+- **Published multi-architecture FerretDB containers include MongoDB Shell.**
+  The release workflow downloads architecture-matched packages and checksums
+  directly from [wekan/mongosh-patches releases](https://github.com/wekan/mongosh-patches/releases),
+  verifies every package before building, and exposes `mongosh` on `PATH` in
+  each supported image. The release-all workflow can select an explicit shell
+  release or default to the newest one. Static integration coverage verifies
+  the repository, checksum and target-architecture wiring by @xet7. Thanks to
+  xet7.
+
 ## [v1.69.0](https://github.com/wekan/FerretDB/releases/tag/v1.69.0) (2026-09-05)
 
 ### Fixed 🐛

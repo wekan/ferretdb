@@ -4,7 +4,7 @@ name: Docker (from release binaries)
 # attached to a GitHub Release (no compilation) and pushes it to Docker Hub,
 # Quay.io and GHCR — the same registries release-all.yml used to. Because the
 # binaries are already built, buildx just repackages the right one per target
-# into a FROM scratch image, with NO QEMU. Only the Linux ferretdb-<arch> assets
+# into a small runtime image, with NO QEMU. Only the Linux ferretdb-<arch> assets
 # are downloaded, so the platform list covers every Linux platform in the release
 # (amd64, arm64, armhf, armv6, armel, i386, ppc64le, s390x, riscv64, loong64).
 #
@@ -24,6 +24,10 @@ on:
     inputs:
       version:
         description: 'Release tag to use (empty = newest release)'
+        required: false
+        type: string
+      mongosh_version:
+        description: 'wekan/mongosh-patches release tag (empty = newest release)'
         required: false
         type: string
   release:
@@ -65,6 +69,29 @@ jobs:
           done
           echo "=== downloaded ==="; ls -la dist
 
+      - name: Download and verify mongosh packages for every Linux architecture
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          MONGOSH_REPO: wekan/mongosh-patches
+          REQUESTED_MONGOSH_VERSION: ${{ inputs.mongosh_version }}
+        run: |
+          set -euo pipefail
+          tag="$REQUESTED_MONGOSH_VERSION"
+          if [ -z "$tag" ]; then
+            tag="$(gh release list --repo "$MONGOSH_REPO" --limit 1 --json tagName --jq '.[0].tagName')"
+          fi
+          [ -n "$tag" ] && [ "$tag" != null ] || { echo '::error::no mongosh release found'; exit 1; }
+          echo "MONGOSH_VERSION=$tag" >> "$GITHUB_ENV"
+          for arch in amd64 arm64 armhf armv6 armv7 i386 ppc64le s390x riscv64 loong64; do
+            for suffix in tgz tgz.sha256sum; do
+              gh release download "$tag" --repo "$MONGOSH_REPO" \
+                --pattern "mongosh-$arch.$suffix" --dir dist --clobber
+            done
+            (cd dist && sha256sum -c "mongosh-$arch.tgz.sha256sum")
+          done
+          echo '=== verified mongosh packages ==='
+          ls -la dist/mongosh-*
+
       - name: Compute platform list from the downloaded binaries
         run: |
           set -euo pipefail
@@ -85,6 +112,11 @@ jobs:
           for f in dist/ferretdb-*; do
             [ -f "$f" ] || continue
             name="${f#dist/ferretdb-}"
+            # Every image must have a matching shell. mongosh-patches has no
+            # armel runtime yet, so omit arm/v5 rather than ship it without one.
+            shell_name="$name"
+            [ "$name" != armhf ] || shell_name=armv7
+            [ -f "dist/mongosh-$shell_name.tgz" ] || continue
             p="$(map "$name")"
             [ -n "$p" ] || continue
             plats="${plats:+$plats,}$p"

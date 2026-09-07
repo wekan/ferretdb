@@ -4,8 +4,8 @@
 # GitHub Release (downloaded into ./dist/ferretdb-<arch>) — no compiling. Used by
 # .github/workflows/docker.yml. The pick stage runs on the native build platform
 # and just selects the binary matching the target platform, so buildx emits every
-# architecture present in ./dist WITHOUT QEMU. Final image is FROM scratch
-# (architecture-agnostic).
+# architecture present in ./dist WITHOUT QEMU. The matching mongosh package is
+# assembled by wekan/mongosh-patches with the already-built node-patches runtime.
 #
 # See Dockerfile.release.dockerignore for the build context (the ./dist dir +
 # build/ferretdb passwd/group), and Dockerfile for the build-from-source variant
@@ -20,8 +20,8 @@ RUN set -eux; \
     case "${TARGETARCH}/${TARGETVARIANT}" in \
       amd64/*)   n=amd64 ;; \
       arm64/*)   n=arm64 ;; \
-      arm/v7)    n=armhf ;; \
-      arm/v6)    n=armhf ;; \
+      arm/v7)    n=armhf; m=armv7 ;; \
+      arm/v6)    n=armv6; m=armv6 ;; \
       arm/v5)    n=armel ;; \
       arm/)      n=armhf ;; \
       386/*)     n=i386 ;; \
@@ -33,16 +33,22 @@ RUN set -eux; \
     esac; \
     cp "/bins/ferretdb-${n}" /ferretdb; \
     chmod 0755 /ferretdb; \
+    m="${m:-$n}"; \
+    test -f "/bins/mongosh-${m}.tgz"; \
+    mkdir -p /mongosh; \
+    tar -xzf "/bins/mongosh-${m}.tgz" -C /mongosh --strip-components=1; \
+    test -x /mongosh/mongosh; \
     mkdir -p /state; \
     chown 1000:1000 /state
 
-FROM scratch AS final
+FROM debian:bookworm-slim AS final
 
 COPY build/ferretdb/passwd /etc/passwd
 COPY build/ferretdb/group  /etc/group
 USER ferretdb:ferretdb
 
 COPY --from=pick /ferretdb /ferretdb
+COPY --from=pick /mongosh /opt/mongosh
 COPY --from=pick --chown=ferretdb:ferretdb /state /state
 
 ENTRYPOINT ["/ferretdb"]
@@ -56,3 +62,4 @@ ENV FERRETDB_STATE_DIR=/state
 ENV FERRETDB_HANDLER=sqlite
 ENV FERRETDB_SQLITE_URL=file:/state/
 ENV FERRETDB_TELEMETRY=disable
+ENV PATH=/opt/mongosh:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
