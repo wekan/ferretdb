@@ -202,6 +202,7 @@ FERRETDB_DIST_TARGETS=(
   "netbsd-amd64 netbsd amd64 "
   "openbsd-amd64 openbsd amd64 "
   "openbsd-arm64 openbsd arm64 "
+  "android-arm64 android arm64 "
 )
 
 # build_ferretdb_target <name> <goos> <goarch> <goarm> <out-dir> <report-dir>
