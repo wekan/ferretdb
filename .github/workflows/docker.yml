@@ -47,6 +47,7 @@ jobs:
         run: |
           mkdir -p .tools/tmp
           TMPDIR="$PWD/.tools/tmp" bash integration/docker_mongosh_test.sh
+          TMPDIR="$PWD/.tools/tmp" bash tests/release-version.sh
 
       - name: Set up target runtime emulation
         uses: docker/setup-qemu-action@v4
@@ -59,14 +60,17 @@ jobs:
       - name: Resolve release tag and download the Linux per-arch binaries
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+          INPUT_VERSION: ${{ inputs.version }}
         run: |
           set -euo pipefail
-          TAG="${{ github.event.release.tag_name }}"
-          [ -n "$TAG" ] || TAG="${{ inputs.version }}"
+          TAG="$RELEASE_TAG"
+          [ -n "$TAG" ] || TAG="$INPUT_VERSION"
           if [ -z "$TAG" ]; then
             TAG="$(gh release list --limit 1 --json tagName --jq '.[0].tagName')"
           fi
           [ -n "$TAG" ] && [ "$TAG" != "null" ] || { echo "::error::no release tag found"; exit 1; }
+          bash build/ferretdb/validate-version.sh "$TAG"
           echo "Using release: $TAG"
           echo "VERSION=$TAG" >> "$GITHUB_ENV"
           # Download only the Linux ferretdb-<arch> assets (each pattern is an exact

@@ -6,6 +6,15 @@
 
 ### Fixed 🐛
 
+- **Release numbering stays on FerretDB v1 and advances one minor at a time.**
+  Use v1.100.0 after v1.99.0, then v1.101.0, without promoting this SQLite fork
+  to FerretDB v2. Remove the inferred increment from prior release gaps, retain
+  the .0 patch policy, and reject a mistaken non-v1 release heading before
+  changing the changelog or creating a tag. All three release workflows validate
+  explicit and resolved tags before building or downloading assets, including
+  completion of missing release assets. Regression tests cover ordinary,
+  three-digit and patch-reset versions by @xet7. Thanks to xet7.
+
 - **PowerPC Docker images use a working, same-version MongoDB Shell runtime.**
   The packaged cross-built Node binary aborts during V8 initialization before
   executing JavaScript. Discover its version on the target architecture and

@@ -539,6 +539,9 @@ trigger_workflow() {
     return 1
   }
   local wf="$1" version="${2:-}" branch repo i ok
+  if [ -n "$version" ]; then
+    bash "$ROOT/build/ferretdb/validate-version.sh" "$version" || return 1
+  fi
 
   # Resolve OWNER/REPO from the git remote so `gh` targets the right repo even when
   # run outside a detected checkout; fall back to the fork's canonical path.
@@ -651,21 +654,14 @@ act_release_ferretdb() {
     exit 1
   fi
 
+  # Reject a mistaken v2 heading before renaming, committing or tagging anything.
+  bash "$ROOT/build/ferretdb/validate-version.sh" "$newest" || return 1
+
   local version
   if grep -qE '^## Upcoming FerretDB release' CHANGELOG.md; then
-    # Rename the Upcoming section to the next version — the same increment (of the
-    # minor, patch stays .0) as the last release, default +1 — WITH the correct git-tag
-    # link generated from the new version (so the link can never point at the previous
-    # tag).
-    local major nmin smin step
-    major="$(printf '%s' "${newest#v}" | cut -d. -f1)"
-    nmin="$(printf '%s' "${newest#v}"  | cut -d. -f2)"
-    step=1
-    if [ -n "$second" ]; then
-      smin="$(printf '%s' "${second#v}" | cut -d. -f2)"
-      step=$(( nmin - smin )); [ "$step" -le 0 ] && step=1
-    fi
-    version="v${major}.$(( nmin + step )).0"
+    # Always increment the v1 minor by exactly one and reset patch to .0.
+    # v1.99.0 -> v1.100.0: FerretDB v2 is different software.
+    version="$(bash "$ROOT/build/ferretdb/next-version.sh" "$newest")" || return 1
     local date link
     date="$(date +%F)"
     link="https://github.com/wekan/FerretDB/releases/tag/${version}"
@@ -677,11 +673,10 @@ act_release_ferretdb() {
     # check it is the expected +1 increment of the previous release.
     version="$newest"
     if [ -n "$second" ]; then
-      local exp_major exp_min
-      exp_major="$(printf '%s' "${second#v}" | cut -d. -f1)"
-      exp_min="$(( $(printf '%s' "${second#v}" | cut -d. -f2) + 1 ))"
-      if [ "$version" != "v${exp_major}.${exp_min}.0" ]; then
-        info "Note: newest CHANGELOG version $version is not the +1 increment (v${exp_major}.${exp_min}.0) of the previous $second; proceeding anyway."
+      local expected
+      expected="$(bash "$ROOT/build/ferretdb/next-version.sh" "$second")" || return 1
+      if [ "$version" != "$expected" ]; then
+        info "Note: newest CHANGELOG version $version is not the +1 increment ($expected) of the previous $second; proceeding anyway."
       fi
     fi
     info "No Upcoming section; using newest CHANGELOG version $version."

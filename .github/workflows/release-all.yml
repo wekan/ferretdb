@@ -63,9 +63,16 @@ jobs:
 
       - name: Resolve release version
         id: ver
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
         run: |
-          V="${{ inputs.version }}"
+          set -euo pipefail
+          mkdir -p "$PWD/.tools/tmp"
+          export TMPDIR="$PWD/.tools/tmp"
+          bash tests/release-version.sh
+          V="$INPUT_VERSION"
           [ -n "$V" ] || V="$(git describe --tags --always)"
+          bash build/ferretdb/validate-version.sh "$V"
           echo "version=$V" >> "$GITHUB_OUTPUT"
           echo "Release version: $V"
 
