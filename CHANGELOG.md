@@ -2,6 +2,15 @@
 
 <!-- markdownlint-disable MD024 MD034 -->
 
+## Upcoming FerretDB release
+
+### New Features 🎉
+
+- **Release builds include Android ARM64.** The same CGO-free embedded SQLite
+  build used by the other portable binaries compiles for Android arm64, and
+  release notes and regression coverage keep the new asset in the canonical
+  target order by @xet7. Thanks to xet7.
+
 ## [v1.70.0](https://github.com/wekan/FerretDB/releases/tag/v1.70.0) (2026-09-07)
 
 ### New Features 🎉
