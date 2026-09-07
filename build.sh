@@ -194,7 +194,14 @@ FERRETDB_DIST_TARGETS=(
   "mac-amd64 darwin amd64 "
   "mac-arm64 darwin arm64 "
   "freebsd-amd64 freebsd amd64 "
+  "freebsd-i386 freebsd 386 "
+  "freebsd-armel freebsd arm 5"
+  "freebsd-armv6 freebsd arm 6"
+  "freebsd-armv7 freebsd arm 7"
   "freebsd-arm64 freebsd arm64 "
+  "netbsd-amd64 netbsd amd64 "
+  "openbsd-amd64 openbsd amd64 "
+  "openbsd-arm64 openbsd arm64 "
 )
 
 # build_ferretdb_target <name> <goos> <goarch> <goarm> <out-dir> <report-dir>
@@ -207,7 +214,7 @@ build_ferretdb_target() {
   mkdir -p "$out"
   # FERRETDB_DIST_SKIP_LIST names a file of asset names already on the release
   # (one per line). A target listed there is not rebuilt, which is how
-  # release-all-missing.yml builds only the gap instead of all sixteen
+  # release-all-missing.yml builds only the gap instead of all targets
   # platforms. Absent or empty => build everything, which is what an ordinary
   # release does.
   #

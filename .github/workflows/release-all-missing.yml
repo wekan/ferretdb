@@ -2,8 +2,8 @@ name: Release All Missing (FerretDB v1)
 
 # Build only the FerretDB binaries a release does not already carry.
 #
-# WHY: release-all.yml cross-compiles sixteen platforms sequentially - they are
-# built one at a time on purpose, because sixteen concurrent Go builds risk
+# WHY: release-all.yml cross-compiles all platforms sequentially - they are
+# built one at a time on purpose, because concurrent Go builds risk
 # running the runner out of memory - and then uploads every one with --clobber.
 # When a single platform is missing, or an upload failed, or a run was
 # cancelled, that whole sequence had to run again to produce the one binary that

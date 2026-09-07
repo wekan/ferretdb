@@ -6,6 +6,15 @@
 
 ### New Features 🎉
 
+- **Release builds cover every additional native OS/CPU combination supported
+  by the embedded SQLite stack.** Compile probes with the release Go toolchain
+  add FreeBSD 386, ARMv5, ARMv6 and ARMv7, NetBSD amd64, and OpenBSD amd64 and
+  arm64 beside the existing Linux, Windows, macOS and FreeBSD targets. The same
+  probes reject AIX, DragonFly, Illumos, MIPS, big-endian PowerPC, unsupported
+  BSD architectures, Plan 9 and Solaris where modernc SQLite does not compile,
+  so the release list represents buildable binaries rather than aspirational
+  matrix entries by @xet7. Thanks to xet7.
+
 - **Published multi-architecture FerretDB containers include MongoDB Shell.**
   The release workflow downloads architecture-matched packages and checksums
   directly from [wekan/mongosh-patches releases](https://github.com/wekan/mongosh-patches/releases),
