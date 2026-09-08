@@ -533,7 +533,7 @@ func run() {
 		// internal/util/telemetry.ForkNotice, logged above by NewReporter), so
 		// the reporter loop is never started at all - not "started but
 		// disabled". Even if it were, Reporter.Run is itself a no-op in this
-		// fork and would still never contact beacon.ferretdb.com.
+		// fork and would still never contact anything elsewhere.
 		// r.Run(ctx)
 	}()
 

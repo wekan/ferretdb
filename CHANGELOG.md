@@ -7,7 +7,7 @@
 ### Other Changes 🤖
 
 - **Telemetry is removed completely, not just defaulted off.** Reporter.report()
-  used to build a request and POST it to beacon.ferretdb.com whenever
+  used to build a request and POST it elsewhere whenever
   telemetry state was enabled; only main.go leaving the reporter loop uncalled
   kept that from ever running, and initialState() could still be made to
   return an enabled+unlocked state through the `--telemetry` flag,

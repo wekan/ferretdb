@@ -56,12 +56,12 @@ func (s *Flag) UnmarshalText(text []byte) error {
 }
 
 // ForkNotice is the message shown wherever upstream FerretDB would otherwise
-// report a telemetry state or point at https://beacon.ferretdb.com. It is
+// report a telemetry state or point at where it sends telemetry. It is
 // exported so every other package that used to echo a telemetry message
 // (getLog, serverStatus, freeMonitoring, ...) shows the same wording instead
 // of inventing its own.
 const ForkNotice = "This is the wekan/FerretDB fork. Telemetry is completely removed: " +
-	"no state is tracked, no report is ever built, and nothing is ever sent to beacon.ferretdb.com."
+	"no state is tracked, no report is ever built, and nothing is ever sent elsewhere."
 
 // initialState always returns disabled and locked: this fork removes
 // telemetry outright rather than merely defaulting it off, so there is no
