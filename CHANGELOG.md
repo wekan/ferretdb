@@ -4,18 +4,17 @@
 
 ## Upcoming FerretDB release
 
-### Fixed 🐛
+### Other Changes 🤖
 
-- **A Docker registry overview sync failure can no longer fail the docker job.**
-  wekan/wekan's `release-all.yml` hit this in production (v11.62): the
-  identical Docker Hub/Quay.io overview-sync pattern's `exit 1` on a 403
-  failed a job whose actual image push had already succeeded, because
-  `DOCKERHUB_AUTH`/`QUAY_AUTH` are scoped for `docker login`/image push, and a
-  registry can refuse a repository-description write with that same
-  credential (it needs broader account-owner/repo-admin rights). Applied the
-  same fix here before this workflow could hit the same 403: a sync failure
-  is reported as `::warning::` rather than `::error::`, the shared `fail`
-  flag is gone, and the step always exits 0 by @xet7. Thanks to xet7.
+- **Removed the Docker Hub/Quay.io registry-overview sync.**
+  `DOCKERHUB_AUTH`/`QUAY_AUTH` are scoped for `docker login`/image push, and
+  neither registry grants a push-scoped token the rights a
+  repository-description write needs - wekan/wekan's `release-all.yml`
+  already hit this in production (v11.62) with the identical step. The
+  maintainer now updates both registries' overviews by hand, so the step -
+  added two releases ago and never able to do more than warn on its own
+  failure - is removed entirely rather than kept as a permission workaround,
+  along with its `tests/docker-overview-sync.sh` by @xet7. Thanks to xet7.
 
 ## [v1.75.0](https://github.com/wekan/FerretDB/releases/tag/v1.75.0) (2026-09-08)
 
