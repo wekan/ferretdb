@@ -4,6 +4,25 @@
 
 ## Upcoming FerretDB release
 
+### New Features 🎉
+
+- **Docker Hub and Quay.io repository overviews stay in sync with README.md.**
+  Neither registry updates its long-form repository description on its own, so
+  the overview page had drifted from what README.md actually documents. The
+  `docker.yml` workflow now adds a step, after the multi-arch image push, that
+  reads README.md and pushes it as the overview: to Docker Hub via its
+  login-for-JWT-then-PATCH `full_description` API, and to Quay.io via its
+  `PUT /api/v1/repository/{repo}` `description` API, reusing the same
+  `DOCKERHUB_AUTH`/`QUAY_AUTH` secrets already decoded for `docker login`. GHCR
+  needs no such call: a package linked to a GitHub repository already shows
+  that repository's own README automatically. Each registry is synced
+  independently, the same way the image push already tolerates one registry
+  failing without blocking the others, and no token is ever echoed or logged.
+  README.md's own Docker links were reformatted as a markdown list so they
+  render correctly as the pushed overview. `tests/docker-overview-sync.sh`
+  pins the new step's endpoints, request bodies and the no-plaintext-secrets
+  rule by @xet7. Thanks to xet7.
+
 ### Fixed 🐛
 
 - **Concurrent document modifiers preserve every acknowledged update.** Serialize

@@ -48,6 +48,7 @@ jobs:
           mkdir -p .tools/tmp
           TMPDIR="$PWD/.tools/tmp" bash integration/docker_mongosh_test.sh
           TMPDIR="$PWD/.tools/tmp" bash tests/release-version.sh
+          bash tests/docker-overview-sync.sh
 
       - name: Set up target runtime emulation
         uses: docker/setup-qemu-action@v4
@@ -174,3 +175,64 @@ jobs:
             exit 1
           fi
           echo "All registry pushes succeeded."
+
+      - name: Sync the repository overview to each registry from README.md
+        # Docker Hub and Quay.io each show a long-form "overview"/description on
+        # the repository page, separate from the image tags, and neither one
+        # updates it automatically — it has to be pushed via their API. This
+        # keeps it in sync with README.md on every release so the overview never
+        # drifts from what the repository actually documents.
+        #
+        # GHCR needs no such step: a package linked to a GitHub repository (as
+        # ghcr.io/wekan/ferretdb is) shows that repository's own README
+        # automatically, and there is no separate overview field to set via API.
+        env:
+          DOCKERHUB_AUTH: ${{ secrets.DOCKERHUB_AUTH }}
+          QUAY_AUTH: ${{ secrets.QUAY_AUTH }}
+        run: |
+          set -uo pipefail
+          fail=0
+          readme="$(cat README.md)"
+
+          echo "::group::Sync overview to Docker Hub"
+          creds="$(printf '%s' "$DOCKERHUB_AUTH" | base64 -d)"
+          user="${creds%%:*}"
+          token="${creds#*:}"
+          jwt="$(curl -fsS -X POST https://hub.docker.com/v2/users/login \
+                   -H 'Content-Type: application/json' \
+                   -d "$(jq -n --arg u "$user" --arg p "$token" '{username:$u,password:$p}')" \
+                 | jq -r '.token')"
+          if [ -n "$jwt" ] && [ "$jwt" != null ] && curl -fsS -X PATCH \
+               https://hub.docker.com/v2/repositories/wekanteam/ferretdb \
+               -H "Authorization: JWT $jwt" \
+               -H 'Content-Type: application/json' \
+               -d "$(jq -n --arg d "$readme" '{full_description:$d}')" \
+               -o /dev/null; then
+            echo "Docker Hub: OK"
+          else
+            echo "::error::Docker Hub overview sync failed"
+            fail=1
+          fi
+          echo "::endgroup::"
+
+          echo "::group::Sync overview to Quay.io"
+          creds="$(printf '%s' "$QUAY_AUTH" | base64 -d)"
+          quay_token="${creds#*:}"
+          if curl -fsS -X PUT \
+               https://quay.io/api/v1/repository/wekan/ferretdb \
+               -H "Authorization: Bearer $quay_token" \
+               -H 'Content-Type: application/json' \
+               -d "$(jq -n --arg d "$readme" '{description:$d}')" \
+               -o /dev/null; then
+            echo "Quay.io: OK"
+          else
+            echo "::error::Quay.io overview sync failed"
+            fail=1
+          fi
+          echo "::endgroup::"
+
+          if [ "$fail" -ne 0 ]; then
+            echo "::error::One or more registry overview syncs failed (see groups above)."
+            exit 1
+          fi
+          echo "All registry overview syncs succeeded."
