@@ -186,12 +186,21 @@ jobs:
         # GHCR needs no such step: a package linked to a GitHub repository (as
         # ghcr.io/wekan/ferretdb is) shows that repository's own README
         # automatically, and there is no separate overview field to set via API.
+        #
+        # NEVER FAILS THE JOB. wekan/wekan's release-all.yml found out why the
+        # hard way: DOCKERHUB_AUTH/QUAY_AUTH are scoped for `docker login`/image
+        # push, and both registries can return 403 to a repository-DESCRIPTION
+        # write with that same credential — updating a Docker Hub/Quay.io
+        # overview needs broader (account-owner / repo-admin) rights than a
+        # push-scoped token carries. The image itself is already built, pushed
+        # and verified by the step above; a stale repository description is not
+        # worth failing a release build over, so a failure here is a warning,
+        # never a job failure.
         env:
           DOCKERHUB_AUTH: ${{ secrets.DOCKERHUB_AUTH }}
           QUAY_AUTH: ${{ secrets.QUAY_AUTH }}
         run: |
           set -uo pipefail
-          fail=0
           readme="$(cat README.md)"
 
           echo "::group::Sync overview to Docker Hub"
@@ -210,8 +219,7 @@ jobs:
                -o /dev/null; then
             echo "Docker Hub: OK"
           else
-            echo "::error::Docker Hub overview sync failed"
-            fail=1
+            echo "::warning::Docker Hub overview sync failed (non-fatal - DOCKERHUB_AUTH may lack repo-admin rights)"
           fi
           echo "::endgroup::"
 
@@ -226,13 +234,7 @@ jobs:
                -o /dev/null; then
             echo "Quay.io: OK"
           else
-            echo "::error::Quay.io overview sync failed"
-            fail=1
+            echo "::warning::Quay.io overview sync failed (non-fatal - QUAY_AUTH may lack repo-admin rights)"
           fi
           echo "::endgroup::"
-
-          if [ "$fail" -ne 0 ]; then
-            echo "::error::One or more registry overview syncs failed (see groups above)."
-            exit 1
-          fi
-          echo "All registry overview syncs succeeded."
+          exit 0

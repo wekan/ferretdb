@@ -38,4 +38,14 @@ sync_body="$(awk '
 ! grep -qE 'echo.*\$(token|jwt|quay_token|DOCKERHUB_AUTH|QUAY_AUTH)\b' <<<"$sync_body"
 ! grep -q 'set -x' <<<"$sync_body"
 
-echo 'docker-overview-sync: docker.yml syncs README.md to Docker Hub and Quay.io without leaking credentials'
+# NEVER FAILS THE JOB: DOCKERHUB_AUTH/QUAY_AUTH are scoped for docker
+# login/image push, and a registry can (and did, in wekan/wekan's
+# release-all.yml) return 403 to a repository-description write with that
+# same credential. The image is already built and pushed by the step above;
+# a stale description must not fail the whole workflow.
+! grep -q 'fail=1' <<<"$sync_body"
+! grep -qE 'echo "::error::(Docker Hub|Quay\.io) overview sync failed' <<<"$sync_body"
+grep -qE '::warning::(Docker Hub|Quay\.io) overview sync failed' <<<"$sync_body"
+grep -q 'exit 0' <<<"$sync_body"
+
+echo 'docker-overview-sync: docker.yml syncs README.md to Docker Hub and Quay.io without leaking credentials or failing the job'
