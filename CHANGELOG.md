@@ -25,7 +25,16 @@
   then asserts the server was never called - proving removal rather than
   pinning "nobody calls Run" - and the state-matrix tests that used to assert
   telemetry COULD be turned on now assert it cannot, under the same inputs,
-  by @xet7. Thanks to xet7.
+  by @xet7. Thanks to xet7. The companion
+  [wekan/mongosh-patches](https://github.com/wekan/mongosh-patches) fork
+  received the same treatment for mongosh's own telemetry in the same round of
+  work: its `resolveToggleableAnalytics()` also returns the no-op analytics
+  sink unconditionally, so mongosh - which WeKan bundles alongside this
+  FerretDB build - phones home no more than FerretDB does. Checked separately,
+  and confirmed to have no telemetry of its own to remove:
+  [wekan/mongo-tools-patches](https://github.com/wekan/mongo-tools-patches),
+  the third fork in this same family, which builds the MongoDB Database Tools
+  WeKan ships.
 
 ## [v1.74.0](https://github.com/wekan/FerretDB/releases/tag/v1.74.0) (2026-09-08)
 
