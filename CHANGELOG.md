@@ -2,6 +2,31 @@
 
 <!-- markdownlint-disable MD024 MD034 -->
 
+## Upcoming FerretDB release
+
+### Other Changes 🤖
+
+- **Telemetry is removed completely, not just defaulted off.** Reporter.report()
+  used to build a request and POST it to beacon.ferretdb.com whenever
+  telemetry state was enabled; only main.go leaving the reporter loop uncalled
+  kept that from ever running, and initialState() could still be made to
+  return an enabled+unlocked state through the `--telemetry` flag,
+  `DO_NOT_TRACK`, or a previously saved state file. initialState() now always
+  returns disabled+locked regardless of any of those inputs, reporter.go drops
+  the request/response types, the HTTP client and makeRequest/report entirely,
+  and `Reporter.Run()` is a no-op that only logs the fork's own notice - so
+  even a future caller of `r.Run(ctx)` cannot reintroduce a network call. Every
+  message that used to explain how to opt out of telemetry (the CLI flag help
+  text, the startup warning banner in `getLog`) is replaced with a notice that
+  this fork removes telemetry completely, since there is nothing left to opt
+  out of; the flags themselves are kept, accepted and ignored for
+  configuration compatibility with upstream FerretDB. `TestRunNeverCallsHome`
+  points Reporter at a real, reachable test server and runs it to completion,
+  then asserts the server was never called - proving removal rather than
+  pinning "nobody calls Run" - and the state-matrix tests that used to assert
+  telemetry COULD be turned on now assert it cannot, under the same inputs,
+  by @xet7. Thanks to xet7.
+
 ## [v1.74.0](https://github.com/wekan/FerretDB/releases/tag/v1.74.0) (2026-09-08)
 
 ### New Features 🎉
