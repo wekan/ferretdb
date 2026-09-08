@@ -24,7 +24,13 @@ import (
 	"github.com/FerretDB/FerretDB/internal/util/testutil"
 )
 
-func TestState(t *testing.T) {
+// TestStateAlwaysDisabledAndLocked pins this fork's guarantee: telemetry is
+// completely removed, not merely defaulted off, so no flag, environment
+// variable, executable name, or previously saved state can produce anything
+// other than disabled+locked. This replaces upstream's TestState, which
+// exercised the flag/DNT/prev-state matrix that used to be able to turn
+// telemetry on.
+func TestStateAlwaysDisabledAndLocked(t *testing.T) {
 	t.Parallel()
 
 	for name, tc := range map[string]struct {
@@ -32,35 +38,14 @@ func TestState(t *testing.T) {
 		dnt      string
 		execName string
 		prev     *bool
-		state    *bool
-		locked   bool
-		err      string
 	}{
-		"default": {},
-		"prev": {
-			prev:  pointer.ToBool(false),
-			state: pointer.ToBool(false),
-		},
-		"flag": {
-			flag:   "disable",
-			prev:   pointer.ToBool(true),
-			state:  pointer.ToBool(false),
-			locked: true,
-		},
-		"dnt": {
-			dnt:    "1",
-			state:  pointer.ToBool(false),
-			locked: true,
-		},
-		"invalidDnt": {
-			dnt: "foo",
-			err: "failed to parse foo",
-		},
-		"conflict": {
-			flag:     "enable",
-			execName: "DoNotTrack",
-			err:      "telemetry can't be enabled",
-		},
+		"default":          {},
+		"prevEnabled":      {prev: pointer.ToBool(true)},
+		"prevDisabled":     {prev: pointer.ToBool(false)},
+		"flagEnable":       {flag: "enable"},
+		"flagDisable":      {flag: "disable"},
+		"dntSet":           {dnt: "1"},
+		"execNameMentions": {execName: "donottrack"},
 	} {
 		tc := tc
 
@@ -68,17 +53,24 @@ func TestState(t *testing.T) {
 			t.Parallel()
 
 			var f Flag
-			err := f.UnmarshalText([]byte(tc.flag))
-			require.NoError(t, err)
+			require.NoError(t, f.UnmarshalText([]byte(tc.flag)))
 
 			state, locked, err := initialState(&f, tc.dnt, tc.execName, tc.prev, testutil.Logger(t))
-			if tc.err != "" {
-				assert.EqualError(t, err, tc.err)
-				return
-			}
-			assert.NoError(t, err)
-			assert.Equal(t, tc.state, state)
-			assert.Equal(t, tc.locked, locked)
+			require.NoError(t, err)
+			assert.Equal(t, pointer.ToBool(false), state, "telemetry must never come back enabled")
+			assert.True(t, locked, "telemetry must always be locked so nothing can enable it later")
 		})
 	}
+}
+
+// TestInvalidDNTStillRejected keeps upstream's one genuine input-validation
+// case: parseValue still rejects a DO_NOT_TRACK value it cannot parse, even
+// though the parsed value itself no longer affects the (always-disabled)
+// outcome.
+func TestInvalidDNTStillRejected(t *testing.T) {
+	t.Parallel()
+
+	var f Flag
+	_, _, err := initialState(&f, "not-a-valid-value", "", nil, testutil.Logger(t))
+	assert.EqualError(t, err, "failed to parse not-a-valid-value")
 }

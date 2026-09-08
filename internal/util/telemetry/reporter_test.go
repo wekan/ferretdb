@@ -15,11 +15,9 @@
 package telemetry
 
 import (
-	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
-	"time"
 
 	"github.com/AlekSi/pointer"
 	"github.com/stretchr/testify/assert"
@@ -30,40 +28,31 @@ import (
 	"github.com/FerretDB/FerretDB/internal/util/testutil"
 )
 
-func TestNewReporterLock(t *testing.T) {
+// TestNewReporterAlwaysLocksDisabled replaces upstream's TestNewReporterLock:
+// this fork's NewReporter locks telemetry into the disabled state no matter
+// what the flag, DO_NOT_TRACK, or executable name say - see
+// TestStateAlwaysDisabledAndLocked in telemetry_test.go for the same
+// guarantee at the initialState level.
+func TestNewReporterAlwaysLocksDisabled(t *testing.T) {
 	t.Parallel()
 
 	for name, tc := range map[string]struct {
 		f        *Flag
 		dnt      string
 		execName string
-		t        *bool
-		locked   bool
 	}{
-		"NoSet": {
-			f: new(Flag),
-		},
-		"FlagEnable": {
-			f:      &Flag{v: pointer.ToBool(true)},
-			t:      pointer.ToBool(true),
-			locked: true,
-		},
+		"NoSet":      {f: new(Flag)},
+		"FlagEnable": {f: &Flag{v: pointer.ToBool(true)}},
 		"FlagDisable": {
-			f:      &Flag{v: pointer.ToBool(false)},
-			t:      pointer.ToBool(false),
-			locked: true,
+			f: &Flag{v: pointer.ToBool(false)},
 		},
 		"DoNotTrack": {
-			f:      new(Flag),
-			dnt:    "enable",
-			t:      pointer.ToBool(false),
-			locked: true,
+			f:   new(Flag),
+			dnt: "enable",
 		},
 		"ExecName": {
 			f:        new(Flag),
 			execName: "exec_donottrack",
-			t:        pointer.ToBool(false),
-			locked:   true,
 		},
 	} {
 		name, tc := name, tc
@@ -87,140 +76,42 @@ func TestNewReporterLock(t *testing.T) {
 			assert.NoError(t, err)
 
 			s := sp.Get()
-			assert.Equal(t, tc.t, s.Telemetry)
-			assert.Equal(t, tc.locked, s.TelemetryLocked)
+			assert.Equal(t, pointer.ToBool(false), s.Telemetry)
+			assert.True(t, s.TelemetryLocked)
 		})
 	}
 }
 
-// beaconServer returns a httptest.Server that emulates beacon server.
-func beaconServer(t *testing.T, calls *int, res *response) *httptest.Server {
-	t.Helper()
-
-	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		*calls++
-
-		w.WriteHeader(http.StatusCreated)
-		require.NoError(t, json.NewEncoder(w).Encode(res))
-	}))
-
-	t.Cleanup(s.Close)
-
-	return s
-}
-
-func TestReporterReport(t *testing.T) {
+// TestRunNeverCallsHome proves the actual removal: even pointing Reporter at
+// a real, reachable HTTP server and running it to completion, no request
+// ever reaches that server. This is the negative test for telemetry removal
+// - it must hold regardless of where in the codebase Run/report is called
+// from, not just at the one call site main.go happens to leave uncalled.
+func TestRunNeverCallsHome(t *testing.T) {
 	t.Parallel()
 
-	t.Run("TelemetryEnabled", func(t *testing.T) {
-		t.Parallel()
+	var serverCalled int
+	beacon := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		serverCalled++
+		w.WriteHeader(http.StatusCreated)
+	}))
+	t.Cleanup(beacon.Close)
 
-		var serverCalled int
-		telemetryResponse := response{
-			LatestVersion:   "v1.2.1",
-			UpdateAvailable: true,
-		}
-		bs := beaconServer(t, &serverCalled, &telemetryResponse)
+	sp, err := state.NewProvider("")
+	require.NoError(t, err)
 
-		sp, err := state.NewProvider("")
-		require.NoError(t, err)
+	opts := NewReporterOpts{
+		URL:         beacon.URL,
+		F:           &Flag{v: pointer.ToBool(true)}, // even an explicit (rejected) enable attempt
+		ConnMetrics: connmetrics.NewListenerMetrics().ConnMetrics,
+		P:           sp,
+		L:           testutil.Logger(t),
+	}
 
-		opts := NewReporterOpts{
-			URL:           bs.URL,
-			F:             &Flag{v: pointer.ToBool(true)},
-			ConnMetrics:   connmetrics.NewListenerMetrics().ConnMetrics,
-			P:             sp,
-			L:             testutil.Logger(t),
-			ReportTimeout: 1 * time.Minute,
-		}
+	r, err := NewReporter(&opts)
+	require.NoError(t, err)
 
-		r, err := NewReporter(&opts)
-		require.NoError(t, err)
+	r.Run(testutil.Ctx(t))
 
-		s := r.P.Get()
-		assert.False(t, s.UpdateAvailable)
-		assert.Empty(t, s.LatestVersion)
-
-		r.report(testutil.Ctx(t))
-		assert.Equal(t, 1, serverCalled)
-
-		s = r.P.Get()
-		assert.True(t, s.UpdateAvailable)
-		assert.Equal(t, "v1.2.1", s.LatestVersion)
-
-		telemetryResponse.UpdateAvailable = false
-
-		r.report(testutil.Ctx(t))
-		assert.Equal(t, 2, serverCalled)
-
-		s = r.P.Get()
-		assert.False(t, s.UpdateAvailable)
-		assert.Equal(t, "v1.2.1", s.LatestVersion)
-
-		telemetryResponse.UpdateAvailable = true
-		telemetryResponse.LatestVersion = "v1.2.0"
-
-		r.report(testutil.Ctx(t))
-		assert.Equal(t, 3, serverCalled)
-
-		s = r.P.Get()
-		assert.True(t, s.UpdateAvailable)
-		assert.Equal(t, "v1.2.0", s.LatestVersion)
-
-		require.NoError(t, sp.Update(func(s *state.State) { s.DisableTelemetry() }))
-
-		r.report(testutil.Ctx(t))
-		assert.Equal(t, 3, serverCalled)
-
-		s = r.P.Get()
-		assert.False(t, s.UpdateAvailable)
-		assert.Empty(t, s.LatestVersion)
-
-		require.NoError(t, sp.Update(func(s *state.State) { s.EnableTelemetry() }))
-		telemetryResponse.LatestVersion = "v1.2.2"
-
-		r.report(testutil.Ctx(t))
-		assert.Equal(t, 4, serverCalled)
-
-		s = r.P.Get()
-		assert.True(t, s.UpdateAvailable)
-		assert.Equal(t, "v1.2.2", s.LatestVersion)
-	})
-
-	t.Run("TelemetryDisabled", func(t *testing.T) {
-		t.Parallel()
-
-		var serverCalled int
-		telemetryResponse := response{
-			LatestVersion:   "v1.2.1",
-			UpdateAvailable: true,
-		}
-		bs := beaconServer(t, &serverCalled, &telemetryResponse)
-
-		sp, err := state.NewProvider("")
-		require.NoError(t, err)
-
-		opts := NewReporterOpts{
-			URL:           bs.URL,
-			F:             &Flag{v: pointer.ToBool(false)},
-			ConnMetrics:   connmetrics.NewListenerMetrics().ConnMetrics,
-			P:             sp,
-			L:             testutil.Logger(t),
-			ReportTimeout: 1 * time.Minute,
-		}
-
-		r, err := NewReporter(&opts)
-		require.NoError(t, err)
-
-		s := r.P.Get()
-		assert.False(t, s.UpdateAvailable)
-		assert.Empty(t, s.LatestVersion)
-
-		r.report(testutil.Ctx(t))
-		assert.Equal(t, 0, serverCalled)
-
-		s = r.P.Get()
-		assert.False(t, s.UpdateAvailable)
-		assert.Empty(t, s.LatestVersion)
-	})
+	assert.Equal(t, 0, serverCalled, "Run must never send a request to the telemetry endpoint")
 }

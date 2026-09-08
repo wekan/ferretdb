@@ -55,74 +55,35 @@ func (s *Flag) UnmarshalText(text []byte) error {
 	return nil
 }
 
-// initialState returns initial telemetry state based on:
-//   - Kong flag value (including `FERRETDB_TELEMETRY` environment variable);
-//   - common DO_NOT_TRACK environment variable;
-//   - executable name;
-//   - and the previously saved state.
-//
-// The second returned value is true if the telemetry state should be locked, because of
-// setting telemetry via a command-line flag, an environment variable, or a filename.
+// ForkNotice is the message shown wherever upstream FerretDB would otherwise
+// report a telemetry state or point at https://beacon.ferretdb.com. It is
+// exported so every other package that used to echo a telemetry message
+// (getLog, serverStatus, freeMonitoring, ...) shows the same wording instead
+// of inventing its own.
+const ForkNotice = "This is the wekan/FerretDB fork. Telemetry is completely removed: " +
+	"no state is tracked, no report is ever built, and nothing is ever sent to beacon.ferretdb.com."
+
+// initialState always returns disabled and locked: this fork removes
+// telemetry outright rather than merely defaulting it off, so there is no
+// flag, environment variable, executable name, or previously saved state
+// that can turn it back on. `f`, `dnt`, `execName` and `prev` are accepted
+// only to keep this function's callers (and the CLI flags they come from)
+// unchanged; none of them is read.
 func initialState(f *Flag, dnt string, execName string, prev *bool, l *slog.Logger) (state *bool, locked bool, err error) {
-	// https://consoledonottrack.com is not entirely clear about accepted values.
-	// Assume that "1", "t", "true", etc. mean that telemetry should be disabled,
-	// and other valid values, including "0" and empty string, mean undecided.
-	dntV, err := parseValue(dnt)
-	if err != nil {
-		return
+	// Validate DO_NOT_TRACK the same way UnmarshalText validates the flag, so a
+	// typo in it still fails startup instead of being silently ignored - even
+	// though the parsed value can no longer change the (always-disabled) result.
+	if _, err = parseValue(dnt); err != nil {
+		return nil, false, err
 	}
 
-	if pointer.GetBool(dntV) {
-		l.Info(fmt.Sprintf("Telemetry is disabled by DO_NOT_TRACK=%s environment variable.", dnt))
-		state = pointer.ToBool(false)
-		locked = true
-	}
-
-	if strings.Contains(strings.ToLower(execName), "donottrack") {
-		l.Info(fmt.Sprintf("Telemetry is disabled by %q executable name.", execName))
-		state = pointer.ToBool(false)
-		locked = true
-	}
-
-	// telemetry state is disabled and locked via flag, dnt env or binary name
-	if state != nil {
-		// check for conflicts
-		if f.v != nil && *f.v {
-			err = fmt.Errorf("telemetry can't be enabled")
-		}
-
-		return
-	}
-
-	// if flag is unset, use previous unlocked state
-	if f.v == nil {
-		state = prev
-
-		if state == nil {
-			// undecided state, reporter would log about it during run
-			return
-		}
-
-		if *state {
-			l.Info("Telemetry is enabled because it was enabled previously.")
-		} else {
-			l.Info("Telemetry is disabled because it was disabled previously.")
-		}
-
-		return
-	}
-
-	// flag is set, use it as locked state
-	state = f.v
-	locked = true
-
-	if *state {
-		l.Info("Telemetry enabled.")
+	if f.v != nil && *f.v {
+		l.Warn("Telemetry cannot be enabled: " + ForkNotice)
 	} else {
-		l.Info("Telemetry disabled.")
+		l.Info(ForkNotice)
 	}
 
-	return
+	return pointer.ToBool(false), true, nil
 }
 
 // check interfaces

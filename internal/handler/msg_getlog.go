@@ -34,6 +34,7 @@ import (
 	"github.com/FerretDB/FerretDB/internal/util/lazyerrors"
 	"github.com/FerretDB/FerretDB/internal/util/logging"
 	"github.com/FerretDB/FerretDB/internal/util/must"
+	"github.com/FerretDB/FerretDB/internal/util/telemetry"
 )
 
 // MsgGetLog implements `getLog` command.
@@ -117,12 +118,13 @@ func (h *Handler) MsgGetLog(connCtx context.Context, msg *wire.OpMsg) (*wire.OpM
 		}
 
 		switch {
+		// Fork change: state.Telemetry is always false and locked (see
+		// telemetry.ForkNotice), so this branch cannot fire today. It is kept,
+		// with the fork's own message, so a future change to that guarantee
+		// cannot bring back upstream's "read how to opt out" wording, which
+		// would be false here - telemetry is removed, not opted out of.
 		case state.Telemetry == nil:
-			startupWarnings = append(
-				startupWarnings,
-				"The telemetry state is undecided.",
-				"Read more about FerretDB telemetry and how to opt out at https://beacon.ferretdb.com.",
-			)
+			startupWarnings = append(startupWarnings, telemetry.ForkNotice)
 
 		case state.UpdateInfo != "", state.UpdateAvailable:
 			msg := state.UpdateInfo

@@ -54,8 +54,8 @@ import (
 // Keep order in sync with documentation.
 var cli struct {
 	// We hide `run` command to show only `ping` in the help message.
-	Run  struct{} `cmd:"" default:"1"                             hidden:""`
-	Ping struct{} `cmd:"" help:"Ping existing FerretDB instance."`
+	Run         struct{} `cmd:"" default:"1"                             hidden:""`
+	Ping        struct{} `cmd:"" help:"Ping existing FerretDB instance."`
 	CheckSQLite struct {
 		Path string `arg:"" required:"" help:"SQLite database file to check read-only." type:"path"`
 	} `cmd:"" name:"check-sqlite" help:"Run SQLite PRAGMA quick_check and exit."`
@@ -108,9 +108,11 @@ var cli struct {
 		} `embed:"" prefix:"traces-"`
 	} `embed:"" prefix:"otel-"`
 
-	// This fork: telemetry is disabled by default (was "undecided", which would
-	// otherwise start reporting to beacon.ferretdb.com after a delay).
-	Telemetry telemetry.Flag `default:"disable" help:"Enable or disable basic telemetry. See https://beacon.ferretdb.com."`
+	// This fork: telemetry is completely removed, not just defaulted off (see
+	// internal/util/telemetry.ForkNotice). The flag is kept, accepted and
+	// ignored so a config file or command line built for upstream FerretDB
+	// still parses; it can no longer turn telemetry back on.
+	Telemetry telemetry.Flag `default:"disable" help:"This fork removes telemetry completely; this flag has no effect and is kept only for upstream compatibility."` //nolint:lll // flag help text
 
 	Test struct {
 		RecordsDir string `default:"" help:"Testing: directory for record files."`
@@ -128,12 +130,15 @@ var cli struct {
 		BatchSize            int `default:"100" help:"Experimental: maximum insertion batch size."`
 		MaxBsonObjectSizeMiB int `default:"16"  help:"Experimental: maximum BSON object size in MiB."`
 
+		// This fork: telemetry is completely removed (see internal/util/telemetry).
+		// These flags are kept, accepted and ignored for upstream compatibility;
+		// none of them is read.
 		Telemetry struct {
-			URL            string        `default:"https://beacon.ferretdb.com/" help:"Telemetry: reporting URL."`
-			UndecidedDelay time.Duration `default:"1h"                           help:"Telemetry: delay for undecided state."`
-			ReportInterval time.Duration `default:"24h"                          help:"Telemetry: report interval."`
-			ReportTimeout  time.Duration `default:"5s"                           help:"Telemetry: report timeout."`
-			Package        string        `default:""                             help:"Telemetry: custom package type."`
+			URL            string        `default:"https://beacon.ferretdb.com/" help:"Unused: telemetry is removed in this fork."`
+			UndecidedDelay time.Duration `default:"1h"                           help:"Unused: telemetry is removed in this fork."`
+			ReportInterval time.Duration `default:"24h"                          help:"Unused: telemetry is removed in this fork."`
+			ReportTimeout  time.Duration `default:"5s"                           help:"Unused: telemetry is removed in this fork."`
+			Package        string        `default:""                             help:"Unused: telemetry is removed in this fork."`
 		} `embed:"" prefix:"telemetry-"`
 	} `embed:"" prefix:"test-"`
 }
@@ -524,9 +529,11 @@ func run() {
 			l.LogAttrs(ctx, logging.LevelFatal, "Failed to create telemetry reporter", logging.Error(err))
 		}
 
-		// This fork: do NOT start the telemetry reporter loop. Telemetry is
-		// disabled by default (see the Telemetry flag above), so there is no
-		// reporting to beacon.ferretdb.com and no periodic report/ping overhead.
+		// This fork: telemetry is completely removed (see
+		// internal/util/telemetry.ForkNotice, logged above by NewReporter), so
+		// the reporter loop is never started at all - not "started but
+		// disabled". Even if it were, Reporter.Run is itself a no-op in this
+		// fork and would still never contact beacon.ferretdb.com.
 		// r.Run(ctx)
 	}()
 
