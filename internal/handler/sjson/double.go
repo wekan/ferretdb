@@ -34,12 +34,18 @@ func (d *doubleType) UnmarshalJSON(data []byte) error {
 		panic("null data")
 	}
 
-	// JSON itself has no NaN number. SJSON uses a string for that IEEE-754 value
-	// while its schema continues to identify the BSON type as a double; an
-	// ordinary string is unambiguous because it has a string schema.
+	// JSON itself has no NaN or Infinity numbers. SJSON uses a string for those
+	// IEEE-754 values while its schema continues to identify the BSON type as a
+	// double; an ordinary string is unambiguous because it has a string schema.
 	switch string(data) {
 	case `"NaN"`:
 		*d = doubleType(math.NaN())
+		return nil
+	case `"Infinity"`:
+		*d = doubleType(math.Inf(+1))
+		return nil
+	case `"-Infinity"`:
+		*d = doubleType(math.Inf(-1))
 		return nil
 	}
 
@@ -67,6 +73,10 @@ func (d *doubleType) MarshalJSON() ([]byte, error) {
 	switch {
 	case math.IsNaN(f):
 		return []byte(`"NaN"`), nil
+	case math.IsInf(f, +1):
+		return []byte(`"Infinity"`), nil
+	case math.IsInf(f, -1):
+		return []byte(`"-Infinity"`), nil
 	}
 
 	res, err := json.Marshal(f)

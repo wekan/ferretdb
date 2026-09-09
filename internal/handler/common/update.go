@@ -726,14 +726,9 @@ func processMulFieldExpression(command string, doc *types.Document, mulKey strin
 
 	switch {
 	case err == nil:
-		if multiplied, ok := multiplied.(float64); ok && math.IsInf(multiplied, 0) {
-			return false, handlererrors.NewCommandErrorMsg(
-				handlererrors.ErrBadValue,
-				fmt.Sprintf("update produces invalid value: { %q: %f } "+
-					"(update operations that produce infinity values are not allowed)", path, multiplied,
-				),
-			)
-		}
+		// MongoDB itself allows a $mul that overflows to +Inf/-Inf; the storage
+		// encoding (internal/handler/sjson) round-trips infinite doubles the same
+		// way it already did NaN, so there is no reason to refuse the result here.
 
 		// after successfully getting value from path, setting it back cannot fail.
 		must.NoError(doc.SetByPath(path, multiplied))

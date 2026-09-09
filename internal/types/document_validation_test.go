@@ -81,13 +81,14 @@ func TestDocumentValidateData(t *testing.T) {
 				reason: errors.New(`invalid key: "foo" (duplicate keys are not allowed)`),
 			},
 
+			// MongoDB itself stores +Inf/-Inf doubles without complaint, and sjson
+			// (the storage encoding) round-trips them the same way it already did
+			// NaN - so these are valid documents now, not validation failures.
 			"PositiveInfinity": {
-				doc:    must.NotFail(NewDocument("v", math.Inf(1))),
-				reason: errors.New(`invalid value: { "v": +Inf } (infinity values are not allowed)`),
+				doc: must.NotFail(NewDocument("_id", "1", "v", math.Inf(1))),
 			},
 			"NegativeInfinity": {
-				doc:    must.NotFail(NewDocument("v", math.Inf(-1))),
-				reason: errors.New(`invalid value: { "v": -Inf } (infinity values are not allowed)`),
+				doc: must.NotFail(NewDocument("_id", "1", "v", math.Inf(-1))),
 			},
 
 			"NoID": {

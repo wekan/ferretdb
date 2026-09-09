@@ -431,8 +431,13 @@ func unmarshalSingleValue(data json.RawMessage, sch *elem) (any, error) {
 		}
 		return time.UnixMilli(v), nil
 	case elemTypeDouble:
-		if bytes.Equal(data, []byte(`"NaN"`)) {
+		switch {
+		case bytes.Equal(data, []byte(`"NaN"`)):
 			return math.NaN(), nil
+		case bytes.Equal(data, []byte(`"Infinity"`)):
+			return math.Inf(+1), nil
+		case bytes.Equal(data, []byte(`"-Infinity"`)):
+			return math.Inf(-1), nil
 		}
 		v, err := strconv.ParseFloat(string(data), 64)
 		if err != nil {

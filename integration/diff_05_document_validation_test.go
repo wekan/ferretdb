@@ -49,20 +49,6 @@ func TestDiffDocumentValidation(t *testing.T) {
 					Message: `invalid key: "$foo" (key must not start with '$' sign)`,
 				}}},
 			},
-			"Infinity": {
-				doc: bson.D{{"foo", math.Inf(1)}},
-				err: mongo.WriteException{WriteErrors: []mongo.WriteError{{
-					Code:    2,
-					Message: `invalid value: { "foo": +Inf } (infinity values are not allowed)`,
-				}}},
-			},
-			"NegativeInfinity": {
-				doc: bson.D{{"foo", math.Inf(-1)}},
-				err: mongo.WriteException{WriteErrors: []mongo.WriteError{{
-					Code:    2,
-					Message: `invalid value: { "foo": -Inf } (infinity values are not allowed)`,
-				}}},
-			},
 		} {
 			name, tc := name, tc
 			t.Run(name, func(t *testing.T) {
@@ -213,5 +199,76 @@ func TestNaNDouble(t *testing.T) {
 		err = collection.FindOneAndUpdate(ctx, filter, bson.D{{"$set", bson.D{{"foo", math.NaN()}}}}).Err()
 
 		require.NoError(t, err)
+	})
+}
+
+// TestInfinityDouble mirrors TestNaNDouble: MongoDB stores +Inf/-Inf doubles
+// without complaint (unlike the '$' key prefix and array-typed _id cases
+// TestDiffDocumentValidation covers above, infinity is not a real difference
+// from MongoDB - see internal/handler/sjson/double.go and
+// internal/types/document_validation.go for where FerretDB used to reject it).
+func TestInfinityDouble(t *testing.T) {
+	t.Parallel()
+
+	t.Run("InsertAndRead", func(t *testing.T) {
+		t.Parallel()
+
+		for name, v := range map[string]float64{
+			"Infinity":  math.Inf(+1),
+			"-Infinity": math.Inf(-1),
+		} {
+			name, v := name, v
+			t.Run(name, func(t *testing.T) {
+				t.Parallel()
+
+				ctx, collection := setup.Setup(t, shareddata.Scalars)
+
+				_, err := collection.InsertOne(ctx, bson.D{{"_id", name}, {"value", v}})
+				require.NoError(t, err)
+
+				var actual bson.M
+				err = collection.FindOne(ctx, bson.D{{"_id", name}}).Decode(&actual)
+				require.NoError(t, err)
+				value, ok := actual["value"].(float64)
+				require.True(t, ok)
+				require.True(t, math.IsInf(value, 0))
+				assert.Equal(t, v, value)
+			})
+		}
+	})
+
+	t.Run("Update", func(t *testing.T) {
+		t.Parallel()
+
+		for name, tc := range map[string]struct { //nolint:vet // used only for testing
+			filter bson.D
+			update bson.D
+			opts   *options.UpdateOptions
+		}{
+			"Infinity": {
+				filter: bson.D{{"_id", "5"}},
+				update: bson.D{{"$set", bson.D{{"foo", math.Inf(+1)}}}},
+			},
+			"InfinityWithUpsert": {
+				filter: bson.D{{"_id", "6"}},
+				update: bson.D{{"$set", bson.D{{"foo", math.Inf(+1)}}}},
+				opts:   options.Update().SetUpsert(true),
+			},
+			"MulProducesInfinity": {
+				filter: bson.D{{"_id", "double"}},
+				update: bson.D{{"$mul", bson.D{{"v", math.MaxFloat64}}}},
+			},
+		} {
+			name, tc := name, tc
+			t.Run(name, func(t *testing.T) {
+				t.Parallel()
+
+				ctx, collection := setup.Setup(t, shareddata.Scalars)
+
+				_, err := collection.UpdateOne(ctx, tc.filter, tc.update, tc.opts)
+
+				require.NoError(t, err)
+			})
+		}
 	})
 }

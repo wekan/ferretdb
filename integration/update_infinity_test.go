@@ -20,12 +20,19 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/mongo"
 
 	"github.com/FerretDB/FerretDB/integration/setup"
 )
 
-func TestDiffUpdateProduceInfinity(t *testing.T) {
+// TestUpdateProduceInfinity used to be TestDiffUpdateProduceInfinity: a $mul
+// that overflows to +Inf was rejected here even though MongoDB itself allows
+// it (setup.IsMongoDB(t) below always took the require.NoError(t, err)
+// branch). That gap is closed - see internal/handler/common/update.go and
+// TestInfinityDouble/Update/MulProducesInfinity in
+// diff_05_document_validation_test.go for the equivalent insert/read
+// round-trip - so this is a plain regression test now, not a documented
+// difference from MongoDB.
+func TestUpdateProduceInfinity(t *testing.T) {
 	t.Parallel()
 
 	ctx, collection := setup.Setup(t)
@@ -33,17 +40,12 @@ func TestDiffUpdateProduceInfinity(t *testing.T) {
 	require.NoError(t, err)
 
 	_, err = collection.UpdateOne(ctx, bson.D{{"_id", "number"}}, bson.D{{"$mul", bson.D{{"v", math.MaxFloat64}}}})
+	require.NoError(t, err)
 
-	if setup.IsMongoDB(t) {
-		require.NoError(t, err)
-		return
-	}
-
-	expected := mongo.CommandError{
-		Code: 2,
-		Name: "BadValue",
-		Message: `update produces invalid value: { "v": +Inf }` +
-			` (update operations that produce infinity values are not allowed)`,
-	}
-	AssertEqualCommandError(t, expected, err)
+	var actual bson.M
+	err = collection.FindOne(ctx, bson.D{{"_id", "number"}}).Decode(&actual)
+	require.NoError(t, err)
+	v, ok := actual["v"].(float64)
+	require.True(t, ok)
+	require.True(t, math.IsInf(v, +1))
 }

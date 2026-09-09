@@ -155,12 +155,10 @@ func (d *Document) validateData(isTopLevel bool) error {
 				}
 			}
 		case float64:
-			if math.IsInf(value, 0) {
-				return newValidationError(
-					ErrValidation, fmt.Errorf("invalid value: { %q: %f } (infinity values are not allowed)", key, value),
-				)
-			}
-
+			// MongoDB itself stores +Inf/-Inf doubles without complaint; sjson (the
+			// storage encoding, see internal/handler/sjson/double.go) round-trips
+			// them the same way it already did NaN, so there is no longer a
+			// storage-layer reason to reject them here.
 			if value == 0 && math.Signbit(value) {
 				d.Set(key, math.Copysign(0, +1))
 			}
