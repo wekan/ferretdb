@@ -32,6 +32,20 @@
   insert/read/update round-trip against a live server by @xet7. Thanks to
   xet7.
 
+- **The tools module no longer resolves a gRPC-Go with an xDS-server crash
+  vulnerability.** Dependabot alert #47:
+  [GHSA-2v4p-qf9q-27wj](https://github.com/advisories/GHSA-2v4p-qf9q-27wj) -
+  a gRPC-Go server configured with `xds.NewGRPCServer()` crashes (High
+  severity, Denial of Service) on a crafted request missing both the
+  `:authority` and `Host` headers, affecting `google.golang.org/grpc` >=
+  1.83.0, < 1.83.2. The root module and `integration/go.mod` were already on
+  the patched 1.83.2 (PR #24, #25), but `tools/go.mod` - a separate module
+  pulling grpc in indirectly through `golang.org/x/pkgsite` - was missed and
+  stayed on the vulnerable 1.83.1. `go get google.golang.org/grpc@v1.83.2`
+  followed by `go mod tidy` brings it to the patched version; `go mod
+  verify` and `go list -m all` both succeed with the updated graph by
+  @xet7. Thanks to xet7.
+
 ### Other Changes 🤖
 
 - **The gRPC library receives a follow-up patch release.**
