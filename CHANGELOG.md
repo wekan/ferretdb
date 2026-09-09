@@ -2,6 +2,21 @@
 
 <!-- markdownlint-disable MD024 MD034 -->
 
+## Upcoming FerretDB release
+
+### Fixed 🐛
+
+- **Hardcoded SQLite version/source-id test pins are updated to 3.53.4.** The
+  `modernc.org/sqlite` bump (1.57.0 → 1.58.0, from the earlier "ferretdb"
+  dependabot group update) embeds a newer SQLite release (3.53.3 → 3.53.4),
+  which three tests pinned by exact string: `TestDefaults` in
+  `internal/backends/sqlite/metadata/pool/pool_test.go`
+  (`sqlite_version()`/`sqlite_source_id()`), and the `BackendVersion` checks
+  in `internal/backends/backend_test.go` and
+  `internal/backends/sqlite/metadata/registry_test.go`. The dependency bump
+  is the intended change; the guards are updated to match it by @xet7.
+  Thanks to xet7.
+
 ## [v1.77.0](https://github.com/wekan/FerretDB/releases/tag/v1.77.0) (2026-09-09)
 
 ### Fixed 🐛
