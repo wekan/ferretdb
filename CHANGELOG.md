@@ -2,6 +2,36 @@
 
 <!-- markdownlint-disable MD024 MD034 -->
 
+## Upcoming FerretDB release
+
+### Fixed 🐛
+
+- **Storing an Infinity/-Infinity double no longer fails.** `mongorestore`
+  restoring a wekan `cards` collection with a `sort: -Infinity` value failed
+  one document with `invalid value: { "sort": -Inf } (infinity values are not
+  allowed)`, even though real MongoDB stores +Inf/-Inf doubles without
+  complaint. The root cause was one level down from that check: sjson (the
+  JSON-based encoding documents are stored as) already special-cased NaN as
+  the string `"NaN"` because Go's `encoding/json` cannot marshal NaN/Inf
+  floats directly, but never did the same for Infinity, so
+  `internal/types/document_validation.go` rejected it outright rather than
+  hand the storage layer a value it could not round-trip.
+  `internal/handler/sjson/double.go` now encodes ±Infinity as `"Infinity"`/
+  `"-Infinity"` strings the same way, `internal/handler/sjson/sjson.go`'s
+  single-value fast path decodes them back, and the document-validation
+  rejection is removed now that storage supports it. The same restriction on
+  a `$mul` that overflows to infinity
+  (`internal/handler/common/update.go`) is removed for the same reason -
+  real MongoDB allows that too. `TestDouble` in
+  `internal/handler/sjson/double_test.go` and `TestDocumentValidateData` in
+  `internal/types/document_validation_test.go` pin the round-trip and the
+  now-valid documents; `TestInfinityDouble` and `TestUpdateProduceInfinity`
+  in `integration/` (replacing the two cases removed from
+  `TestDiffDocumentValidation` and the former `TestDiffUpdateProduceInfinity`,
+  since infinity is not actually a difference from MongoDB) cover the
+  insert/read/update round-trip against a live server by @xet7. Thanks to
+  xet7.
+
 ## [v1.76.0](https://github.com/wekan/FerretDB/releases/tag/v1.76.0) (2026-09-08)
 
 ### Other Changes 🤖
