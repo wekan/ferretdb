@@ -5,18 +5,18 @@ go 1.27.0
 require (
 	github.com/AlekSi/pointer v1.2.0
 	github.com/FerretDB/wire v0.1.7
-	github.com/SAP/go-hdb v1.18.2
+	github.com/SAP/go-hdb v1.18.3
 	github.com/alecthomas/kong v1.16.1
 	github.com/arl/statsviz v0.8.2
 	github.com/dop251/goja v0.0.0-20260701091749-b07b74453ea9
-	github.com/go-sql-driver/mysql v1.10.0
+	github.com/go-sql-driver/mysql v1.10.1
 	github.com/google/uuid v1.6.0
 	github.com/jackc/pgerrcode v0.0.0-20250907135507-afb5586c32a6
 	github.com/jackc/pgx/v5 v5.10.0
 	github.com/pmezard/go-difflib v1.0.0
 	github.com/prometheus/client_golang v1.24.1
-	github.com/prometheus/client_model v0.6.2
-	github.com/prometheus/common v0.70.1
+	github.com/prometheus/client_model v0.6.3
+	github.com/prometheus/common v0.71.0
 	github.com/stretchr/testify v1.12.1
 	github.com/xdg-go/scram v1.2.0
 	github.com/xdg-go/stringprep v1.0.4
@@ -26,11 +26,11 @@ require (
 	go.opentelemetry.io/otel/sdk v1.46.0
 	go.opentelemetry.io/otel/trace v1.46.0
 	go.uber.org/automaxprocs v1.6.0
-	golang.org/x/crypto v0.55.0
+	golang.org/x/crypto v0.56.0
 	golang.org/x/crypto/x509roots/fallback v0.0.0-20260630172432-7626c5025624
 	golang.org/x/exp v0.0.0-20260611194520-c48552f49976
-	golang.org/x/sys v0.47.0
-	modernc.org/sqlite v1.57.0
+	golang.org/x/sys v0.48.0
+	modernc.org/sqlite v1.58.0
 )
 
 require (
@@ -73,8 +73,7 @@ require (
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260819154853-08b0e4226688 // indirect
 	google.golang.org/grpc v1.83.2 // indirect
 	google.golang.org/protobuf v1.36.12 // indirect
-	modernc.org/gc/v3 v3.1.5 // indirect
-	modernc.org/libc v1.74.4 // indirect
+	modernc.org/libc v1.75.6 // indirect
 	modernc.org/mathutil v1.7.1 // indirect
-	modernc.org/memory v1.11.0 // indirect
+	modernc.org/memory v1.12.1 // indirect
 )
