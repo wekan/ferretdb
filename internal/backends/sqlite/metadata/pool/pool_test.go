@@ -260,8 +260,8 @@ func TestDefaults(t *testing.T) {
 	require.NotContains(t, options, "OMIT_VACUUM")
 
 	for q, expected := range map[string]string{
-		"SELECT sqlite_version()":   "3.53.3",
-		"SELECT sqlite_source_id()": "2026-06-26 20:14:12 d4c0e51e4aeb96955b99185ab9cde75c339e2c29c3f3f12428d364a10d782c62",
+		"SELECT sqlite_version()":   "3.53.4",
+		"SELECT sqlite_source_id()": "2026-07-24 19:02:57 bf7c7f30031888f4e796e429ab3978879485813aaca6f641c7b33e4e09459bcc",
 		"PRAGMA auto_vacuum":        "0",
 		"PRAGMA busy_timeout":       "30000",
 		"PRAGMA encoding":           "UTF-8",
