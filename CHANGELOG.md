@@ -32,6 +32,36 @@
   insert/read/update round-trip against a live server by @xet7. Thanks to
   xet7.
 
+### Other Changes 🤖
+
+- **The gRPC library receives a follow-up patch release.**
+  [PR #24](https://github.com/wekan/FerretDB/pull/24) and
+  [PR #25](https://github.com/wekan/FerretDB/pull/25) update
+  `google.golang.org/grpc` from 1.83.1 to 1.83.2 in both the root module and
+  `integration`. Module checksums verify and the affected packages build by
+  @xet7. Thanks to dependabot and xet7.
+
+- **Database-image and build-tooling dependencies are current.**
+  [PR #26](https://github.com/wekan/FerretDB/pull/26) bumps the `mongo`
+  image used by `build/deps` from 8.3.8 to 8.3.9, and
+  [PR #27](https://github.com/wekan/FerretDB/pull/27) bumps the `golang`
+  image used by `build/ferretdb` from 1.27.0 to 1.27.1 by @xet7. Thanks to
+  dependabot and xet7.
+
+- **Runtime dependencies in the "ferretdb" group are current.**
+  [PR #28](https://github.com/wekan/FerretDB/pull/28) updates
+  `github.com/SAP/go-hdb` (1.18.2 → 1.18.3), `github.com/go-sql-driver/mysql`
+  (1.10.0 → 1.10.1), `github.com/prometheus/client_model` (0.6.2 → 0.6.3),
+  `github.com/prometheus/common` (0.70.1 → 0.71.0), `golang.org/x/crypto`
+  (0.55.0 → 0.56.0), `golang.org/x/sys` (0.47.0 → 0.48.0) and
+  `modernc.org/sqlite` (1.57.0 → 1.58.0, pulling in newer
+  `modernc.org/libc`/`modernc.org/memory`). The bump left `integration`'s
+  `go.mod`/`go.sum` out of sync with the root module's new indirect-dependency
+  versions, which failed `go build ./integration/...` with "updates to go.mod
+  needed"; `go mod tidy` there brings it back in sync. Module checksums
+  verify and a binary containing the SQLite, PostgreSQL, MySQL and HANA
+  handlers builds successfully by @xet7. Thanks to dependabot and xet7.
+
 ## [v1.76.0](https://github.com/wekan/FerretDB/releases/tag/v1.76.0) (2026-09-08)
 
 ### Other Changes 🤖
